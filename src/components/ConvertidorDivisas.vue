@@ -9,7 +9,7 @@
           </svg>
           <h1 class="text-4xl font-bold text-gray-800">Convertidor de Divisas</h1>
         </div>
-        <p class="text-gray-600">Convierte entre las principales monedas del mundo</p>
+        <p class="text-gray-600">Aplicacion realizada por Juan Vazquez</p>
       </div>
 
       <!-- Tarjeta Principal -->
