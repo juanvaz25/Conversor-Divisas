@@ -9,7 +9,16 @@
           </svg>
           <h1 class="text-4xl font-bold text-gray-800">Convertidor de Divisas</h1>
         </div>
-        <p class="text-gray-600">Aplicacion realizada por Juan Vazquez</p>
+        <p class="text-gray-600">Aplicación realizada por Juan Vazquez</p>
+        <div class="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+          <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          Tasas en tiempo real
+        </div>
+      </div>
+
+      <!-- Mensaje de error -->
+      <div v-if="error" class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+        <p class="text-red-700">{{ error }}</p>
       </div>
 
       <!-- Tarjeta Principal -->
@@ -74,11 +83,17 @@
         <!-- Resultado -->
         <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white">
           <div class="text-sm font-medium opacity-90 mb-2">Resultado</div>
-          <div class="text-3xl font-bold mb-1">
-            {{ obtenerSimbolo(monedaDestino) }} {{ resultado.toFixed(2) }}
+          <div v-if="cargando" class="flex items-center gap-3">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            <span class="text-xl">Cargando tasas...</span>
           </div>
-          <div class="text-sm opacity-80">
-            {{ cantidad }} {{ monedaOrigen }} = {{ resultado.toFixed(2) }} {{ monedaDestino }}
+          <div v-else>
+            <div class="text-3xl font-bold mb-1">
+              {{ obtenerSimbolo(monedaDestino) }} {{ resultado.toFixed(2) }}
+            </div>
+            <div class="text-sm opacity-80">
+              {{ cantidad }} {{ monedaOrigen }} = {{ resultado.toFixed(2) }} {{ monedaDestino }}
+            </div>
           </div>
         </div>
       </div>
@@ -88,13 +103,20 @@
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-bold text-gray-800">Información de Tasas</h2>
           <button
-            @click="actualizarHora"
-            class="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+            @click="obtenerTasasCambio"
+            :disabled="cargando"
+            class="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg 
+              class="w-4 h-4"
+              :class="{ 'animate-spin': cargando }"
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
-            Actualizar
+            {{ cargando ? 'Actualizando...' : 'Actualizar' }}
           </button>
         </div>
         
@@ -108,13 +130,13 @@
           <div class="flex justify-between">
             <span>Última actualización:</span>
             <span class="font-semibold text-gray-800">
-              {{ ultimaActualizacion }}
+              {{ ultimaActualizacion || 'Cargando...' }}
             </span>
           </div>
         </div>
 
         <!-- Conversiones Rápidas -->
-        <div class="mt-6 pt-6 border-t border-gray-200">
+        <div v-if="!cargando" class="mt-6 pt-6 border-t border-gray-200">
           <h3 class="text-sm font-bold text-gray-700 mb-3">Conversiones Rápidas</h3>
           <div class="grid grid-cols-2 gap-3">
             <div v-for="valor in [1, 10, 100, 1000]" :key="valor" class="bg-gray-50 rounded-lg p-3">
@@ -128,7 +150,7 @@
       </div>
 
       <div class="text-center mt-6 text-sm text-gray-600">
-        <p>Las tasas de cambio son referenciales y pueden variar</p>
+        <p>Tasas de cambio actualizadas en tiempo real desde ExchangeRate-API</p>
       </div>
     </div>
   </div>
@@ -142,24 +164,11 @@ export default {
       cantidad: 100,
       monedaOrigen: 'USD',
       monedaDestino: 'EUR',
-      ultimaActualizacion: new Date().toLocaleTimeString(),
+      tasasCambio: {},
+      ultimaActualizacion: '',
+      cargando: true,
+      error: '',
       
-      // Tasas de cambio
-      tasasCambio: {
-        USD: { EUR: 0.92, GBP: 0.79, JPY: 149.50, ARS: 350.00, BRL: 4.95, MXN: 17.20, CAD: 1.36, AUD: 1.52, CHF: 0.88, CNY: 7.24 },
-        EUR: { USD: 1.09, GBP: 0.86, JPY: 162.50, ARS: 380.50, BRL: 5.38, MXN: 18.70, CAD: 1.48, AUD: 1.65, CHF: 0.96, CNY: 7.87 },
-        GBP: { USD: 1.27, EUR: 1.16, JPY: 189.00, ARS: 444.50, BRL: 6.28, MXN: 21.84, CAD: 1.73, AUD: 1.93, CHF: 1.12, CNY: 9.19 },
-        JPY: { USD: 0.0067, EUR: 0.0062, GBP: 0.0053, ARS: 2.34, BRL: 0.033, MXN: 0.115, CAD: 0.0091, AUD: 0.010, CHF: 0.0059, CNY: 0.048 },
-        ARS: { USD: 0.0029, EUR: 0.0026, GBP: 0.0022, JPY: 0.43, BRL: 0.014, MXN: 0.049, CAD: 0.0039, AUD: 0.0043, CHF: 0.0025, CNY: 0.021 },
-        BRL: { USD: 0.202, EUR: 0.186, GBP: 0.159, JPY: 30.15, ARS: 70.71, MXN: 3.47, CAD: 0.275, AUD: 0.307, CHF: 0.178, CNY: 1.46 },
-        MXN: { USD: 0.058, EUR: 0.053, GBP: 0.046, JPY: 8.70, ARS: 20.41, BRL: 0.288, CAD: 0.079, AUD: 0.088, CHF: 0.051, CNY: 0.421 },
-        CAD: { USD: 0.735, EUR: 0.676, GBP: 0.578, JPY: 109.93, ARS: 256.41, BRL: 3.64, MXN: 12.66, AUD: 1.12, CHF: 0.647, CNY: 5.32 },
-        AUD: { USD: 0.658, EUR: 0.606, GBP: 0.518, JPY: 98.36, ARS: 229.61, BRL: 3.26, MXN: 11.34, CAD: 0.893, CHF: 0.579, CNY: 4.76 },
-        CHF: { USD: 1.136, EUR: 1.045, GBP: 0.893, JPY: 169.89, ARS: 396.59, BRL: 5.62, MXN: 19.61, CAD: 1.545, AUD: 1.726, CNY: 8.23 },
-        CNY: { USD: 0.138, EUR: 0.127, GBP: 0.109, JPY: 20.65, ARS: 48.19, BRL: 0.685, MXN: 2.38, CAD: 0.188, AUD: 0.210, CHF: 0.122 }
-      },
-      
-      // Lista de monedas
       monedas: [
         { codigo: 'USD', nombre: 'Dólar Estadounidense', simbolo: '$' },
         { codigo: 'EUR', nombre: 'Euro', simbolo: '€' },
@@ -181,23 +190,54 @@ export default {
       if (this.monedaOrigen === this.monedaDestino) {
         return cantidadNum;
       }
-      return cantidadNum * this.tasaCambio;
+      const tasa = this.tasasCambio[this.monedaDestino] || 0;
+      return cantidadNum * tasa;
     },
     tasaCambio() {
       if (this.monedaOrigen === this.monedaDestino) {
         return 1;
       }
-      return this.tasasCambio[this.monedaOrigen][this.monedaDestino];
+      return this.tasasCambio[this.monedaDestino] || 0;
     }
   },
+  watch: {
+    monedaOrigen() {
+      this.obtenerTasasCambio();
+    }
+  },
+  mounted() {
+    this.obtenerTasasCambio();
+  },
   methods: {
+    async obtenerTasasCambio() {
+      this.cargando = true;
+      this.error = '';
+      try {
+        const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${this.monedaOrigen}`);
+        const data = await response.json();
+        
+        if (data && data.rates) {
+          this.tasasCambio = data.rates;
+          this.ultimaActualizacion = new Date().toLocaleString('es-ES', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+          });
+        }
+      } catch (err) {
+        this.error = 'Error al obtener las tasas de cambio. Por favor, intenta nuevamente.';
+        console.error('Error:', err);
+      } finally {
+        this.cargando = false;
+      }
+    },
     intercambiarMonedas() {
       const temp = this.monedaOrigen;
       this.monedaOrigen = this.monedaDestino;
       this.monedaDestino = temp;
-    },
-    actualizarHora() {
-      this.ultimaActualizacion = new Date().toLocaleTimeString();
     },
     obtenerSimbolo(codigo) {
       const moneda = this.monedas.find(m => m.codigo === codigo);
@@ -208,5 +248,29 @@ export default {
 </script>
 
 <style scoped>
-/* Estilos adicionales si son necesarios */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
 </style>
